@@ -61,13 +61,13 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: Vcam_Mch
-        path: VCam/packages/*.deb
+        path: "**/packages/*.deb"
         retention-days: 90
 
     - name: Release (on tag)
       if: startsWith(github.ref, 'refs/tags/')
       uses: softprops/action-gh-release@v2
       with:
-        files: VCam/packages/*.deb
+        files: "**/packages/*.deb"
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
