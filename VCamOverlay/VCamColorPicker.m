@@ -19,8 +19,6 @@ static os_log_t pickerLog;
 // Private API: CARenderServerRenderDisplay
 typedef void (*CARenderServerRenderDisplayFunc)(void *, CFStringRef, IOSurfaceRef, int, int, int, int, int);
 
-static CARenderServerRenderDisplayFunc _CARenderServerRenderDisplay = NULL;
-
 @implementation VCamColorPicker {
     IOSurfaceRef _captureSurface;
     CARenderServerRenderDisplayFunc _renderDisplay;
