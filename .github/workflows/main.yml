@@ -1,0 +1,73 @@
+name: Build Vcam_Mch
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+env:
+  THEOS: /opt/theos
+
+jobs:
+  build:
+    runs-on: macos-14
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        submodules: false
+        fetch-depth: 1
+
+    - name: Cache Theos
+      id: cache-theos
+      uses: actions/cache@v4
+      with:
+        path: /opt/theos
+        key: theos-roothide-sdk145-v2
+
+    - name: Install Theos + SDK
+      if: steps.cache-theos.outputs.cache-hit != 'true'
+      run: |
+        set -e
+        
+        # Clone theos (shallow, fast)
+        sudo git clone --depth=1 --recursive https://github.com/theos/theos.git $THEOS
+        sudo chown -R $(id -u):$(id -g) $THEOS
+        
+        # iOS 14.5 SDK — small, fast, stable mirror from theos/sdks
+        cd $THEOS/sdks
+        curl -sL https://github.com/theos/sdks/archive/master.tar.gz | tar xz --strip-components=1
+        
+        echo "SDK installed:"
+        ls $THEOS/sdks/ | head -20
+
+    - name: Build .deb
+      run: |
+        brew install ldid
+        export PATH=$THEOS/bin:$PATH
+        # Auto-detect project root
+        if [ -d "VCam" ]; then
+          cd VCam
+        fi
+        make clean 2>/dev/null || true
+        make package FINALPACKAGE=1 ARCHS=arm64 TARGET="iphone:clang:14.5:15.0" -j$(sysctl -n hw.ncpu)
+        echo "=== Build output ==="
+        ls -lh packages/
+
+    - name: Upload .deb
+      uses: actions/upload-artifact@v4
+      with:
+        name: Vcam_Mch
+        path: VCam/packages/*.deb
+        retention-days: 90
+
+    - name: Release (on tag)
+      if: startsWith(github.ref, 'refs/tags/')
+      uses: softprops/action-gh-release@v2
+      with:
+        files: VCam/packages/*.deb
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
