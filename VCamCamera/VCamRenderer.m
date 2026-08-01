@@ -144,6 +144,9 @@ static os_log_t rendererLog;
     
     if (!mediaPath || mediaPath.length == 0) return nil;
     
+    [_stateLock lock];
+    CIImage *result = nil;
+    
     // Check for LAN stream
     if (config.directMediaEnabled) {
         if (!_lanStream) {
@@ -151,18 +154,20 @@ static os_log_t rendererLog;
         }
         CVPixelBufferRef lanFrame = [_lanStream latestPixelBuffer];
         if (lanFrame) {
-            return [CIImage imageWithCVPixelBuffer:lanFrame];
+            result = [CIImage imageWithCVPixelBuffer:lanFrame];
         }
-        return nil;
     }
-    
     // Video
-    if (mediaKind == 1) {
-        return [self loadVideoFrame:mediaPath];
+    else if (mediaKind == 1) {
+        result = [self loadVideoFrame:mediaPath];
+    }
+    // Still image (default)
+    else {
+        result = [self loadStillImage:mediaPath];
     }
     
-    // Still image (default)
-    return [self loadStillImage:mediaPath];
+    [_stateLock unlock];
+    return result;
 }
 
 - (CIImage *)loadStillImage:(NSString *)path {
